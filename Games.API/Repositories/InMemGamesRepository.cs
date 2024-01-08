@@ -3,9 +3,8 @@ using Games.API.Entities;
 
 namespace Games.API.Repositories;
 
-public class InMemGamesRepository
+public class InMemGamesRepository : IGamesRepository
 {
-
     private readonly List<Game> games = new(){
     new Game(){
         Id=1,

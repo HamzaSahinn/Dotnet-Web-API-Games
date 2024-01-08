@@ -1,4 +1,5 @@
 
+using Games.API.Dtos;
 using Games.API.Entities;
 using Games.API.Repositories;
 
@@ -11,52 +12,59 @@ public static class GamesEndpoints
     public static RouteGroupBuilder MapGamesEndpoints(this IEndpointRouteBuilder routes)
     {
 
-        InMemGamesRepository repositry = new();
-
         var group = routes.MapGroup("/games").WithParameterValidation();
 
-        group.MapGet("/", () => repositry.GetAll());
+        group.MapGet("/", (IGamesRepository repository) => repository.GetAll().Select(game => game.AsDto()));
 
-        group.MapGet("/{id}", (int id) =>
+        group.MapGet("/{id}", (IGamesRepository repository, int id) =>
         {
-            Game? game = repositry.Get(id);
+            Game? game = repository.Get(id);
 
-            return game is not null ? Results.Ok(game) : Results.NotFound();
+            return game is not null ? Results.Ok(game.AsDto()) : Results.NotFound();
         }).WithName(GetGameEndpointName);
 
-        group.MapPost("/", (Game game) =>
+        group.MapPost("/", (IGamesRepository repository, CreateGameDto gameDto) =>
         {
-            repositry.Create(game);
+            Game game = new()
+            {
+                Name = gameDto.Name,
+                Genre = gameDto.Genre,
+                Price = gameDto.Price,
+                ReleaseDate = gameDto.ReleaseDate,
+                ImageUri = gameDto.ImageUri
+            };
+
+            repository.Create(game);
 
             return Results.CreatedAtRoute(GetGameEndpointName, new { id = game.Id }, game);
         });
 
-        group.MapPut("/{id}", (int id, Game updatedGame) =>
+        group.MapPut("/{id}", (IGamesRepository repository, int id, UpdateGameDto updatedGameDto) =>
         {
-            Game? existingOne = repositry.Get(id);
+            Game? existingOne = repository.Get(id);
 
             if (existingOne is null)
             {
                 return Results.NotFound();
             }
 
-            existingOne.Name = updatedGame.Name;
-            existingOne.Genre = updatedGame.Genre;
-            existingOne.Price = updatedGame.Price;
-            existingOne.ReleaseDate = updatedGame.ReleaseDate;
-            existingOne.ImageUri = updatedGame.ImageUri;
+            existingOne.Name = updatedGameDto.Name;
+            existingOne.Genre = updatedGameDto.Genre;
+            existingOne.Price = updatedGameDto.Price;
+            existingOne.ReleaseDate = updatedGameDto.ReleaseDate;
+            existingOne.ImageUri = updatedGameDto.ImageUri;
 
-            repositry.Update(existingOne);
+            repository.Update(existingOne);
             return Results.NoContent();
         });
 
-        group.MapDelete("/{id}", (int id) =>
+        group.MapDelete("/{id}", (IGamesRepository repository, int id) =>
         {
-            Game? existingOne = repositry.Get(id);
+            Game? existingOne = repository.Get(id);
 
             if (existingOne is not null)
             {
-                repositry.Delete(id);
+                repository.Delete(id);
             }
 
             return Results.NoContent();
